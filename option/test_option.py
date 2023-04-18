@@ -1,4 +1,4 @@
-from pytest import fixture
+from pytest import fixture, raises
 from black_scholes import black_scholes
 
 def test_add():
@@ -46,25 +46,92 @@ def test_spot_price_d1(default_scholes_class):
     Test if the d1 value of the spot price black Scholes formula matches with value from original excel file. Accuracy set based on excel data
     """
 
-    assert round(default_scholes_class.__calculate_forward_delta_one__(price=19), 5) == 0.65953
+    assert round(default_scholes_class.__calculate_spot_delta_one__(price=19), 5) == 0.65953
 
-def test_spot_price_d2(default_scholes_class):
+def test_forward_price_d1(default_scholes_class):
     """
     Test if the d1 value of the spot price black Scholes formula matches with value from original excel file. Accuracy set based on excel data
     """
 
-    assert round(default_scholes_class.__calculate_forward_delta_two__(price=19), 5) == 0.45600
+    assert round(default_scholes_class.__calculate_forward_delta_one__(price=19.04367), 5) == 0.65953
 
-def test_spot_premium_call(default_scholes_class):
+def test_price_d2(default_scholes_class):
     """
-    Test the to expected beheviour for spot price using call
-    """
-
-    assert round(default_scholes_class.calculate_option_premium(price_type='Spot price', option='Call'), 5) == 2.69688
-
-def test_Forward_premium_call(default_scholes_class):
-    """
-    Test the to expected beheviour for spot price using call
+    Test if the d1 value of the spot price black Scholes formula matches with value from original excel file. Accuracy set based on excel data
     """
 
-    assert round(default_scholes_class.calculate_option_premium(price_type='Forward', option='Call'), 5) == 2.69688
+    assert round(default_scholes_class.__calculate_delta_two__(d1 = default_scholes_class.__calculate_spot_delta_one__(price=19)), 5) == 0.45600
+    assert round(default_scholes_class.__calculate_delta_two__(d1 = default_scholes_class.__calculate_forward_delta_one__(price=19.04367)), 5) == 0.45600
+
+def test_default_scholes_outcomes(default_scholes_class):
+    """
+    test default outputs and if they match with the beheviour found within the demo excel.
+    """
+
+    outcomes = default_scholes_class.calculate_option_premium()
+
+    assert round(outcomes['Call Spot price'], 5) == 2.69688
+    assert round(outcomes['Call Forward price'], 5) == 2.69688
+    assert round(outcomes['Put forward price'], 5) == 0.65790
+    assert round(outcomes['Put-call parity'], 5) == 0.65790
+
+### test extremes
+
+
+def test_missing_date_input():
+    """
+    Test extremely low inputs and missing dates
+    """
+    with raises(Exception):
+        black_scholes(
+                    trade_date= "",
+                    expiry_date= "",
+                    risk_free_intrest= 0.5,
+                    asset_volatility= 0.3,
+                    convenience_yield= 0,
+                )   
+
+def test_zero_input():
+    """
+    Test extremely low inputs and missing dates
+    """
+    with raises(Exception):
+        black_scholes(
+                    spot_price= -10,
+                    strike_price= 0,
+                    trade_date= "23-11-2023",
+                    expiry_date= "10-05-2024",
+                    risk_free_intrest= 0.0,
+                    asset_volatility= 0.0,
+                    convenience_yield= 0,
+                ) 
+    with raises(Exception):
+        black_scholes(
+                    spot_price= 0,
+                    strike_price= 17,
+                    trade_date= "23-11-2022",
+                    expiry_date= "10-05-2023",
+                    risk_free_intrest= 0.005,
+                    asset_volatility= 0.3,
+                    convenience_yield= 0,
+                )
+    with raises(Exception):
+        black_scholes(
+                    spot_price= 19,
+                    strike_price= 0,
+                    trade_date= "23-11-2022",
+                    expiry_date= "10-05-2023",
+                    risk_free_intrest= 0.005,
+                    asset_volatility= 0.3,
+                    convenience_yield= 0,
+                )
+    with raises(Exception):
+        black_scholes(
+                    spot_price= 19,
+                    strike_price= 17,
+                    trade_date= "23-11-2022",
+                    expiry_date= "10-05-2023",
+                    risk_free_intrest= 0,
+                    asset_volatility= 0,
+                    convenience_yield= 0,
+                )

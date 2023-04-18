@@ -46,8 +46,8 @@ class black_scholes(BaseModel):
     European_option: bool
         Implementation only handles european stock options as the model assumes that options cannot be traded prior to expiry date.
     """
-    spot_price: float = Field(default=0)
-    strike_price: float = Field(default=0)
+    spot_price: float = Field(default=0, ge=0)
+    strike_price: float = Field(default=0, ge=0)
     trade_date: date = Field()
     expiry_date: date = Field()
     time_to_maturity: Optional[float] = Field(default=None) # or price to expiration
@@ -157,9 +157,13 @@ class black_scholes(BaseModel):
 
         if not field_value >= values['trade_date']:
             raise ValueError(f"expiry date: {field_value} is smaller or equal than trade date: {values['trade_date']}. Please ensure that the trade date is larger than the expiry date.")
-        else:
-            return field_value
+        return field_value
 
+    @validator('spot_price','strike_price', 'forward_stock_price')
+    def validate_stock_prices(cls, field_value):
+        if field_value < 0:
+            raise ValueError("Stock values cannot be lower than 0. Specified value of {field_value} must be changed.")
+        return field_value
 
     def __calculate_spot_delta_one__(self, spot_price:float) -> float:
         """
