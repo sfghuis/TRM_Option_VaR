@@ -1,11 +1,11 @@
 import calendar
 import warnings
+
 from scipy.stats import norm
 from typing import Optional
-
 from math import log, sqrt, exp
 from datetime import date, datetime
-from pydantic import BaseModel, Field, validator, root_validator, ValidationError
+from pydantic import BaseModel, Field, validator, root_validator
 
 from constants import  (
     cDateFormat,
