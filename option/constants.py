@@ -1,3 +1,6 @@
 cDateFormat =  "%d-%m-%Y"
 cSpotPrice = 'Spot price'
-cCallOption = 'Call'
+cCallForwardPrice = 'Call Forward price'
+cCallSpotOption = 'Call Spot price'
+cPutForwardOption = 'Put forward price'
+cPutCallParityoption = 'Put-call parity'
