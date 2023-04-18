@@ -314,9 +314,10 @@ class black_scholes(BaseModel):
           
         return forward_price - self.spot_price+self.strike_price*exp(-self.time_to_maturity*self.risk_free_intrest_constant)
 
-    def calculate_option_premium(self) -> dict:
+    def calculate_option_premium(self) -> dict: #TODO ask if additional distribution implementations are required.
         f"""
         Calculate forward, spot price call, forward price put, forward price calls and forward price put-call-parity calculations.
+        Current implementation assumes normally distributed data.
         all logic needed for black and scholes calculations as specified on https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model. 
 
         Returns
