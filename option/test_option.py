@@ -70,17 +70,45 @@ def test_price_d2(default_scholes_class):
     assert round(default_scholes_class.__calculate_delta_two__(d1 = default_scholes_class.__calculate_spot_delta_one__(spot_price)), 5) == 0.45600
     assert round(default_scholes_class.__calculate_delta_two__(d1 = default_scholes_class.__calculate_forward_delta_one__(forward_price)), 5) == 0.45600
 
-def test_default_scholes_outcomes(default_scholes_class):
+def test_out_the_money(default_scholes_class):
     """
-    test default outputs and if they match with the beheviour found within the demo excel.
+    test default in the money outputs and if they match with the beheviour found within the demo excel.
     """
-
+    
     outcomes = default_scholes_class.calculate_option_premium()
-
+    assert default_scholes_class.strike_price < default_scholes_class.spot_price
     assert round(outcomes['Call Spot price'], 5) == 2.69688
     assert round(outcomes['Call Forward price'], 5) == 2.69688
     assert round(outcomes['Put forward price'], 5) == 0.65790
     assert round(outcomes['Put-call parity'], 5) == 0.65790
+
+def test_in_the_money(default_scholes_class):
+    """
+    test default out of money outputs and if they match with the beheviour found within the demo excel.
+    """
+
+    default_scholes_class.strike_price = 20
+    outcomes = default_scholes_class.calculate_option_premium()
+    
+    assert default_scholes_class.strike_price > default_scholes_class.spot_price
+    assert round(outcomes['Call Spot price'], 5) == 1.14704
+    assert round(outcomes['Call Forward price'], 5) == 1.14704
+    assert round(outcomes['Put forward price'], 5) == 2.10118
+    assert round(outcomes['Put-call parity'], 5) == 2.10118
+
+def test_at_the_money(default_scholes_class):
+    """
+    test default out of money outputs and if they match with the beheviour found within the demo excel.
+    """
+
+    default_scholes_class.strike_price = 19
+    outcomes = default_scholes_class.calculate_option_premium()
+
+    assert default_scholes_class.strike_price == default_scholes_class.spot_price
+    assert round(outcomes['Call Spot price'], 5) == 1.56020
+    assert round(outcomes['Call Forward price'], 5) == 1.56020
+    assert round(outcomes['Put forward price'], 5) == 1.51663
+    assert round(outcomes['Put-call parity'], 5) == 1.51663
 
 ### test extremes
 
@@ -160,3 +188,4 @@ def test_non_european_option():
                     convenience_yield= 0,
                     european_option=False
                 ).calculate_option_premium()
+        
