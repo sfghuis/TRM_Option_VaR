@@ -14,6 +14,7 @@ def default_scholes_class():
                     risk_free_intrest= 0.005,
                     asset_volatility= 0.3,
                     convenience_yield= 0,
+                    european_option=True
                 )
 
 ### test time to maturity calculations
@@ -30,38 +31,44 @@ def test_time_to_maturity_leap_year():
     """
 
     test_scholes_leap_year = black_scholes(
+                        spot_price= 19,
+                        strike_price= 17,
                         trade_date= "23-11-2023",
                         expiry_date= "10-05-2024",
                         risk_free_intrest= 0.5,
                         asset_volatility= 0.3,
                         convenience_yield= 0,
+                        european_option=True
                     )   
 
     assert round(test_scholes_leap_year.time_to_maturity, 3) == 0.463
 
 ### test spot price calculations
 
+spot_price=19
+forward_price = 19.04367
+
 def test_spot_price_d1(default_scholes_class):
     """
     Test if the d1 value of the spot price black Scholes formula matches with value from original excel file. Accuracy set based on excel data
     """
 
-    assert round(default_scholes_class.__calculate_spot_delta_one__(price=19), 5) == 0.65953
+    assert round(default_scholes_class.__calculate_spot_delta_one__(spot_price), 5) == 0.65953
 
 def test_forward_price_d1(default_scholes_class):
     """
     Test if the d1 value of the spot price black Scholes formula matches with value from original excel file. Accuracy set based on excel data
     """
 
-    assert round(default_scholes_class.__calculate_forward_delta_one__(price=19.04367), 5) == 0.65953
+    assert round(default_scholes_class.__calculate_forward_delta_one__(forward_price), 5) == 0.65953
 
 def test_price_d2(default_scholes_class):
     """
     Test if the d1 value of the spot price black Scholes formula matches with value from original excel file. Accuracy set based on excel data
     """
 
-    assert round(default_scholes_class.__calculate_delta_two__(d1 = default_scholes_class.__calculate_spot_delta_one__(price=19)), 5) == 0.45600
-    assert round(default_scholes_class.__calculate_delta_two__(d1 = default_scholes_class.__calculate_forward_delta_one__(price=19.04367)), 5) == 0.45600
+    assert round(default_scholes_class.__calculate_delta_two__(d1 = default_scholes_class.__calculate_spot_delta_one__(spot_price)), 5) == 0.45600
+    assert round(default_scholes_class.__calculate_delta_two__(d1 = default_scholes_class.__calculate_forward_delta_one__(forward_price)), 5) == 0.45600
 
 def test_default_scholes_outcomes(default_scholes_class):
     """
@@ -77,7 +84,6 @@ def test_default_scholes_outcomes(default_scholes_class):
 
 ### test extremes
 
-
 def test_missing_date_input():
     """
     Test extremely low inputs and missing dates
@@ -89,11 +95,12 @@ def test_missing_date_input():
                     risk_free_intrest= 0.5,
                     asset_volatility= 0.3,
                     convenience_yield= 0,
+                    european_option=True
                 )   
 
 def test_zero_input():
     """
-    Test extremely low inputs and missing dates
+    Test extremely low inputs
     """
     with raises(Exception):
         black_scholes(
@@ -104,16 +111,19 @@ def test_zero_input():
                     risk_free_intrest= 0.0,
                     asset_volatility= 0.0,
                     convenience_yield= 0,
+                    european_option=True
                 ) 
+        
     with raises(Exception):
         black_scholes(
                     spot_price= 0,
-                    strike_price= 17,
+                    strike_price= -17,
                     trade_date= "23-11-2022",
                     expiry_date= "10-05-2023",
                     risk_free_intrest= 0.005,
                     asset_volatility= 0.3,
                     convenience_yield= 0,
+                    european_option=True
                 )
     with raises(Exception):
         black_scholes(
@@ -124,6 +134,7 @@ def test_zero_input():
                     risk_free_intrest= 0.005,
                     asset_volatility= 0.3,
                     convenience_yield= 0,
+                    european_option=True
                 )
     with raises(Exception):
         black_scholes(
@@ -134,4 +145,18 @@ def test_zero_input():
                     risk_free_intrest= 0,
                     asset_volatility= 0,
                     convenience_yield= 0,
+                    european_option=True
                 )
+
+def test_non_european_option():
+    with raises(Exception):
+        black_scholes(
+                    spot_price= 19,
+                    strike_price= 17,
+                    trade_date= "23-11-2022",
+                    expiry_date= "10-05-2023",
+                    risk_free_intrest= 0.005,
+                    asset_volatility= 0.3,
+                    convenience_yield= 0,
+                    european_option=False
+                ).calculate_option_premium()

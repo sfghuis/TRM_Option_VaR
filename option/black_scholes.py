@@ -46,20 +46,21 @@ class black_scholes(BaseModel):
     European_option: bool
         Implementation only handles european stock options as the model assumes that options cannot be traded prior to expiry date.
     """
-    spot_price: float = Field(default=0, ge=0)
-    strike_price: float = Field(default=0, ge=0)
-    trade_date: date = Field()
-    expiry_date: date = Field()
+
+    trade_date: date
+    expiry_date: date
+    spot_price: float = Field()
+    strike_price: float = Field(gt=0)
     time_to_maturity: Optional[float] = Field(default=None) # or price to expiration
     risk_free_intrest: float = Field(default=0.005, gt=0, le=1)
     risk_free_intrest_constant: float = Field(default = None, gt=0)
     forward_stock_price: float = Field(default=None, gt=0)
     asset_volatility: float = Field(default=0)
     convenience_yield: float = Field(default=0)
-    European_option: bool = Field(default=False)
+    european_option: bool = Field(default=False)
 
     @root_validator(pre=True)
-    def validate_time_format(cls, values):
+    def validate_time_format(cls, values) -> dict:
         f"""
         Dates should be in uniform {cDateFormat} format for calculations.
         """
@@ -83,8 +84,20 @@ class black_scholes(BaseModel):
 
         return values
     
+    @root_validator(pre=True)
+    def validate_stock_prices(cls, values) -> dict:
+        """
+        Check if stock prices are greater then zero
+        """
+        #TODO util that catches ValueErrors for root validator within pydantic
+        for key, value in values.items():
+            if key in ['spot_price', 'forward_price', 'strike_price']:
+                if value < 0:
+                    raise ValueError(f"Stock values cannot be lower than 0. Specified value {key} is {value} and must be changed.")
+        return values
+        
     @root_validator
-    def calculate_expiry_date(cls, values) -> float:
+    def calculate_expiry_date(cls, values) -> dict:
         """
         Calculates the ratio for experiation in time based on the amount of days in the year if no expiry is specified.       
         
@@ -157,12 +170,6 @@ class black_scholes(BaseModel):
 
         if not field_value >= values['trade_date']:
             raise ValueError(f"expiry date: {field_value} is smaller or equal than trade date: {values['trade_date']}. Please ensure that the trade date is larger than the expiry date.")
-        return field_value
-
-    @validator('spot_price','strike_price', 'forward_stock_price')
-    def validate_stock_prices(cls, field_value):
-        if field_value < 0:
-            raise ValueError("Stock values cannot be lower than 0. Specified value of {field_value} must be changed.")
         return field_value
 
     def __calculate_spot_delta_one__(self, spot_price:float) -> float:
@@ -329,8 +336,8 @@ class black_scholes(BaseModel):
             {cPutCallParityoption}: put_call_parity: float
         """
         
-        if not self.European_option:
-            return UserWarning(f"Calculation only works for european stock options")
+        if not self.european_option:
+            raise UserWarning(f"Calculation only works for european stock options")
         
         #calculate base d1 and d2 parameters for forward and spot prices
         d1_spot = self.__calculate_spot_delta_one__(self.spot_price)
