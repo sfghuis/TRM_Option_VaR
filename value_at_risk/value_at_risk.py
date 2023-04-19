@@ -1,19 +1,13 @@
 import pandas as pd
 from math import log, sqrt, exp
-from datetime import timedelta
 from pydantic import BaseModel, validator, root_validator, Field
 from typing import List, Dict, Optional
 
-
-data = pd.read_csv(r"value_at_risk\cyy_market_rates.csv", parse_dates=['date'], sep=";", infer_datetime_format="%d-%m-%Y", thousands='.')
-
-
-test_asset_ccy1 = {"asset_name":"ccy-1","risk_type": "FX","asset_value":  153084.81, "asset_market_rates":data[data.asset == 'ccy-1']}
-test_asset_ccy2 = {"asset_name":"ccy-2","risk_type": "FX", "asset_value":  95891.51, "asset_market_rates":data[data.asset == 'ccy-2']}
-
-#TODO rework data as part of the pydantic class? This would allow more complex validation but also mean more in memory data storage. 
 #TODO can we expect that the date in data is always single day by order otherwise we need to validate that the date dif between rows is equal to time horizon? this would require calander work for weekends and other non trading days / missing days
 #TODO what risktypes do we expect next to FX, is IR still a factor in use. What factor uses the relative type?
+
+# Increase precision of values for validation
+pd.set_option('display.precision', 10)
 
 class Portofolio_asset(BaseModel):
     asset_name:str
@@ -70,6 +64,7 @@ class Value_at_risk(BaseModel):
         
         # Profit and loss vector using log shift
         if asset.risk_type == 'FX':
+            #TODO apperent mismatch after 6th decimal. aggergates to the 4th decimal. problem seems to be the exp function
             asset.profit_loss_vector = asset.asset_value * (asset.asset_market_rates / asset.asset_market_rates.shift(periods=-time_horizon)).dropna().apply(lambda x: exp(log(x)*sqrt(time_horizon))-1, axis=1)
 
         return asset        
@@ -95,9 +90,3 @@ class Value_at_risk(BaseModel):
         """
 
         return {f"{portofolio_name} VaR": self.__calculate_value_at_risk__(assets=assets, time_horizon=time_horizon) for portofolio_name, assets in self.portofolio.items()}
-
-  
-
-
-Portofolio_asset(**test_asset_ccy1)
-Value_at_risk(portofolio = {"SPOT Portfolio value": [test_asset_ccy1, test_asset_ccy2]}).calculate_value_at_risk()
