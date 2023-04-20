@@ -1,7 +1,7 @@
 import pandas as pd
 from value_at_risk import Value_at_risk
 
-test_data = pd.read_csv(r"value_at_risk\cyy_market_rates.csv", parse_dates=['date'], sep=";", infer_datetime_format="%d-%m-%Y", thousands='.')
+test_data = pd.read_csv(r"value_at_risk\cyy_market_rates.csv", parse_dates=['date'], sep=";", infer_datetime_format="%d-%m-%Y")
 
 def test_default_fx_VaR():
     """ 
