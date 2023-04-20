@@ -5,7 +5,7 @@ from typing import List, Dict, Optional
 
 #TODO can we expect that the date in data is always single day by order otherwise we need to validate that the date dif between rows is equal to time horizon? this would require calander work for weekends and other non trading days / missing days
 #TODO what risktypes do we expect next to FX, is IR still a factor in use. What factor uses the relative type?
-
+#TODO check potential mismatch of equations. Numbers check out but sensitivty seems to be ignored for the scenario calculations.
 # Increase precision of values for validation
 pd.set_option('display.precision', 10)
 
