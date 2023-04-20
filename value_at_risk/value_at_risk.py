@@ -94,7 +94,7 @@ class Value_at_risk(BaseModel):
         # Profit and loss vector using log shift
         if asset.risk_type == 'FX':
             asset_shift_vector = (asset.asset_market_rates / asset.asset_market_rates.shift(periods=-time_horizon)).dropna() # due to shift the n time horizon rows are NaN at the end. These are dropped as they are redundant and a risk for further calculations.
-            if asset_shift_vector.empty():
+            if asset_shift_vector.empty:
                 raise UserWarning(f"{asset.asset_name} has an empty shift vector. This happens when the time horizon exceeds history. Please reduce time horizon")
             asset.profit_loss_vector = asset.asset_value * asset_shift_vector.apply(lambda x: exp(log(x)*sqrt(time_horizon))-1, axis=1)
 
