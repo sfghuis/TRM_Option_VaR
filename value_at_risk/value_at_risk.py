@@ -1,13 +1,12 @@
 import pandas as pd
 from math import log, sqrt, exp
-from pydantic import BaseModel, validator, root_validator, Field
+from pydantic import BaseModel, validator, root_validator
 from typing import List, Dict, Optional
 
 #TODO can we expect that the date in data is always single day by order otherwise we need to validate that the date dif between rows is equal to time horizon? this would require calander work for weekends and other non trading days / missing days
 #TODO what risktypes do we expect next to FX, is IR still a factor in use. What factor uses the relative type?
 #TODO check potential mismatch of equations. Numbers check out but sensitivty seems to be ignored for the scenario calculations.
-# Increase precision of values for validation
-pd.set_option('display.precision', 10)
+#TODO check required precision
 
 class Portofolio_asset(BaseModel):
     asset_name:str
@@ -41,7 +40,12 @@ class Portofolio_asset(BaseModel):
 
             #Check if market rate is a float.
             if not 'float' in df_market_rates['market_rate'].dtypes.name.lower():
-                df_market_rates['market_rate'] = pd.to_numeric(df_market_rates["market_rate"].str.replace(",", "."))
+                df_market_rates['market_rate'] = df_market_rates["market_rate"].str.replace(",", ".")
+                avg_float_lenght = df_market_rates['market_rate'].apply(lambda x: len(x)).sum() / len(df_market_rates['market_rate'])
+                # Check if values have the same precision
+                if avg_float_lenght != abs(avg_float_lenght):
+                    raise UserWarning(f"Asset market rates contain different precisions, {set(avg_float_lenght)}, where found. this can lead to numerical inacurracies")
+            df_market_rates['market_rate'] = pd.to_numeric(df_market_rates['market_rate'])
             values["asset_market_rates"] = df_market_rates
 
         return values
@@ -53,7 +57,6 @@ class Portofolio_asset(BaseModel):
             raise UserWarning(f"{field_value} not in {supported_risk_vfactors}")
       return field_value
 
-#TODO will the input remain excel?
 class Value_at_risk(BaseModel):
     portofolio: Dict[str, List[Portofolio_asset]]
       
@@ -64,8 +67,9 @@ class Value_at_risk(BaseModel):
         
         # Profit and loss vector using log shift
         if asset.risk_type == 'FX':
-            #TODO apperent mismatch after 6th decimal. aggergates to the 4th decimal. problem seems to be the exp function
-            asset.profit_loss_vector = asset.asset_value * (asset.asset_market_rates / asset.asset_market_rates.shift(periods=-time_horizon)).dropna().apply(lambda x: exp(log(x)*sqrt(time_horizon))-1, axis=1)
+            #TODO apperent mismatch after 7thh decimal. aggergates to the 4th decimal. problem seems to be the exp function
+            asset_shift_vector = (asset.asset_market_rates / asset.asset_market_rates.shift(periods=-time_horizon)).dropna() # due to shift the n time horizon rows are NaN at the end. These are dropped as they are redundant and a risk for further calculations.
+            asset.profit_loss_vector = asset.asset_value * asset_shift_vector.apply(lambda x: exp(log(x)*sqrt(time_horizon))-1, axis=1)
 
         return asset        
 
