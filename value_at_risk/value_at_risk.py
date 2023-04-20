@@ -1,17 +1,34 @@
 import pandas as pd
 from math import log, sqrt, exp
-from pydantic import BaseModel, validator, root_validator
+from pydantic import BaseModel, validator, root_validator, Field
 from typing import List, Dict, Optional
 
 #TODO can we expect that the date in data is always single day by order otherwise we need to validate that the date dif between rows is equal to time horizon? this would require calander work for weekends and other non trading days / missing days
 #TODO what risktypes do we expect next to FX, is IR still a factor in use. What factor uses the relative type?
 #TODO check potential mismatch of equations. Numbers check out but sensitivty seems to be ignored for the scenario calculations.
 #TODO check required precision
+#TODO ask for guideliness document for reference and validation.
 
 class Portofolio_asset(BaseModel):
-    asset_name:str
+    """
+    Base modal for portofolio assets and their value validation. 
+
+    Parameters
+    ------------
+    asset_name: str
+        name of a specific aset
     risk_type: str
+        risk type to be used in calculations, currently FX is supported
     asset_value: float
+        the value of a specific asset as a float. asset_value >=0
+    asset_market_rates
+        asset market rates as a float. can be any real number
+    profit_loss_vector
+        profit loss vector calculated using the associated risk type.
+    """
+    asset_name: str
+    risk_type: str
+    asset_value: float = Field(ge=0)
     asset_market_rates: Optional[pd.DataFrame]
     profit_loss_vector: Optional[pd.DataFrame]
 
@@ -21,7 +38,8 @@ class Portofolio_asset(BaseModel):
     @root_validator
     def validate_market_rates(cls, values):
         """ 
-        Validate dat the dataframe contains asset that has the same name as the asset_name, index is date.
+        Validate dat the dataframe contains asset that has the same name as the asset_name, index is date. 
+        For market rates, precision and float conversions are checked if market rates are provided non float.
         """
         df_market_rates = values['asset_market_rates']
         if not set(['date', 'asset', 'market_rate']).issubset(df_market_rates.columns):
@@ -58,24 +76,46 @@ class Portofolio_asset(BaseModel):
       return field_value
 
 class Value_at_risk(BaseModel):
+    """
+    Calculates the value at risk for a given set of asset object(s).
+
+    portofolio: Dict[str, List[assets]]
+        dictionaire containing portofolio name and a list of associated :class:`Portofolio_asset` objects
+    """
+
     portofolio: Dict[str, List[Portofolio_asset]]
       
     def __calculate_profit_loss_vector__(self, asset, time_horizon: int=1):
         """ 
         Calculate the proft and loss vectors for a given asset given the assosiate risk type.
+        Method used is given in ING guidelines #TODO Specifify guidelines
         """
         
         # Profit and loss vector using log shift
         if asset.risk_type == 'FX':
-            #TODO apperent mismatch after 7thh decimal. aggergates to the 4th decimal. problem seems to be the exp function
             asset_shift_vector = (asset.asset_market_rates / asset.asset_market_rates.shift(periods=-time_horizon)).dropna() # due to shift the n time horizon rows are NaN at the end. These are dropped as they are redundant and a risk for further calculations.
+            if asset_shift_vector.empty():
+                raise UserWarning(f"{asset.asset_name} has an empty shift vector. This happens when the time horizon exceeds history. Please reduce time horizon")
             asset.profit_loss_vector = asset.asset_value * asset_shift_vector.apply(lambda x: exp(log(x)*sqrt(time_horizon))-1, axis=1)
 
         return asset        
 
-    def __calculate_value_at_risk__(self,assets: list, time_horizon: int=1) -> pd.DataFrame:
+    def __calculate_value_at_risk__(self,assets: list, time_horizon: int=1) -> float:
         """ 
         Calculate the proft and loss vectors for a given asset given the assosiate risk type.
+        Method used is given in ING guidelines #TODO Specifify guidelines
+        
+        Parameters
+        ------------
+        asset: class:`Portofolio_asset`
+            an object of :class:`Portofolio_asset` containing default attributes.
+        time_horizon: int
+            time steps for calculating profit and loss vectors.
+        
+        Returns
+        -----------
+        value_at_risk: float
+            value of risk for the particular portofolio.    
         """
         assets = [self.__calculate_profit_loss_vector__(asset=asset, time_horizon=time_horizon) for asset in assets]
         total_profit_loss = pd.concat([asset.profit_loss_vector for asset in assets]).groupby('date').sum().sort_values(ascending=True)
@@ -85,12 +125,12 @@ class Value_at_risk(BaseModel):
 
     def calculate_value_at_risk(self, time_horizon: int=1): #TODO ask, can FX and IR scneario's be calculated together in the asset pool. #TODO are other shift methods required?
         """
-        Calculate the VaR for FX based risk assets.
+        Calculate the VaR for FX based risk assets. #TODO Specifify guidelines
         
         Parameters
         ------------
-        asset_market_rates: pd.DataFrame
-            the market rates for a given period of time
+        time_horizon: int
+            time steps for calculating profit and loss vectors.
         """
 
         return {f"{portofolio_name} VaR": self.__calculate_value_at_risk__(assets=assets, time_horizon=time_horizon) for portofolio_name, assets in self.portofolio.items()}
